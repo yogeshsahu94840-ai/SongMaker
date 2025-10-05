@@ -1,0 +1,235 @@
+/*
+AI Song Maker - React + Node Example
+
+This single-file deliverable contains:
+- A React component (default export) that provides a simple UI: enter lyrics, pick genre, tempo, voice, and Generate Song.
+- An example Express.js backend (server.js) that accepts the request and returns a generated audio file URL. The server includes 2 example implementation options:
+    A) Mock/demo flow (no external AI) — returns the uploaded/generated file copied to /public/results (useful for local dev).
+    B) Integration notes and commented example showing how you'd call an external AI provider (OpenAI / other) to generate audio.
+
+How to use:
+1) Frontend: paste the React component into src/components/SongMaker.jsx and import it into your app.
+2) Backend: run the Express server (node server.js). It accepts POST /api/generate with JSON or form data.
+3) Replace the placeholder generation logic in server.js with your real AI provider calls.
+
+*** Important notes ***
+- This example does NOT include credentials or direct calls to any paid AI provider. Replace placeholders with your API call and handle keys safely (env variables).
+- The frontend uses fetch to POST JSON to /api/generate and expects { audioUrl: '/results/song_...mp3' }.
+- For production, serve results from a CDN or object storage (S3), not local files.
+*/
+
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+
+export default function SongMaker() {
+  const [lyrics, setLyrics] = useState('');
+  const [genre, setGenre] = useState('pop');
+  const [voice, setVoice] = useState('female');
+  const [bpm, setBpm] = useState(100);
+  const [status, setStatus] = useState('idle');
+  const [audioUrl, setAudioUrl] = useState(null);
+  const [title, setTitle] = useState('');
+
+  async function handleGenerate() {
+    if (!lyrics.trim()) {
+      alert('कृपया पहले कुछ lyrics लिखें।');
+      return;
+    }
+
+    setStatus('generating');
+    setAudioUrl(null);
+
+    try {
+      const payload = { title, lyrics, genre, voice, bpm };
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error('Server returned ' + res.status);
+      const data = await res.json();
+      setAudioUrl(data.audioUrl);
+      setStatus('done');
+    } catch (err) {
+      console.error(err);
+      alert('Generate failed: ' + err.message);
+      setStatus('error');
+    }
+  }
+
+  return (
+    <div className="max-w-3xl mx-auto p-6">
+      <motion.h1 className="text-3xl font-bold mb-4" initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
+        AI Song Maker
+      </motion.h1>
+
+      <div className="grid grid-cols-1 gap-4">
+        <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Song title (optional)" className="p-2 border rounded" />
+
+        <label className="text-sm font-medium">Lyrics</label>
+        <textarea value={lyrics} onChange={e => setLyrics(e.target.value)} rows={8} className="w-full p-2 border rounded" placeholder="अपनी गीत की लाइनें यहाँ लिखें..." />
+
+        <div className="flex gap-2">
+          <select value={genre} onChange={e => setGenre(e.target.value)} className="p-2 border rounded">
+            <option value="pop">Pop</option>
+            <option value="rock">Rock</option>
+            <option value="hiphop">Hip-hop</option>
+            <option value="electronic">Electronic</option>
+            <option value="indie">Indie / Acoustic</option>
+            <option value="bollywood">Bollywood</option>
+          </select>
+
+          <select value={voice} onChange={e => setVoice(e.target.value)} className="p-2 border rounded">
+            <option value="female">Female Voice</option>
+            <option value="male">Male Voice</option>
+            <option value="child">Child/Young</option>
+            <option value="robotic">Robotic / Synth</option>
+          </select>
+
+          <input type="number" value={bpm} onChange={e => setBpm(Number(e.target.value))} className="w-24 p-2 border rounded" />
+        </div>
+
+        <div className="flex gap-2">
+          <button onClick={handleGenerate} className="px-4 py-2 bg-green-600 text-white rounded-lg">
+            {status === 'generating' ? 'Generating...' : 'Generate Song'}
+          </button>
+          <button onClick={() => { setLyrics(''); setAudioUrl(null); setStatus('idle'); }} className="px-4 py-2 border rounded-lg">Reset</button>
+        </div>
+
+        <div className="mt-4">
+          <label className="block text-sm font-medium mb-2">Result</label>
+          <div className="p-4 border rounded bg-gray-50">
+            {status === 'idle' && <div className="text-gray-500">Song will appear here after generation.</div>}
+            {status === 'generating' && <div className="text-gray-600">AI is composing your song... this can take a few seconds to minutes depending on provider.</div>}
+            {status === 'done' && audioUrl && (
+              <div>
+                <audio controls src={audioUrl} className="w-full" />
+                <div className="mt-2">Right-click → Save audio as... to download.</div>
+              </div>
+            )}
+            {status === 'error' && <div className="text-red-500">Error generating song.</div>}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 text-sm text-gray-600">
+        <strong>Note:</strong> Replace backend placeholder logic with your AI music/voice provider. For example, use an API that supports music/voice generation or combine a melody generator + TTS + background bed, then mix with ffmpeg.
+      </div>
+    </div>
+  );
+}
+
+/*
+=== Example Express backend (server.js) ===
+
+This backend example is inside a single block comment to keep the React file valid. IMPORTANT: do not paste this directly into the same file as the React component --- create a separate server/server.js file for the backend.
+
+// Install: npm i express body-parser cors uuid fs-extra
+
+const express = require('express');
+const bodyParser = require('body-parser');
+const fs = require('fs');
+const path = require('path');
+const { v4: uuidv4 } = require('uuid');
+const cors = require('cors');
+
+const app = express();
+app.use(cors());
+app.use(bodyParser.json({ limit: '10mb' }));
+
+app.get('/api/hello', (req, res) => res.json({ ok: true }));
+
+app.post('/api/generate', async (req, res) => {
+  try {
+    const { title, lyrics, genre, voice, bpm } = req.body;
+
+    if (!lyrics) return res.status(400).json({ error: 'Lyrics required' });
+
+    // === Option A: Mock/demo generation ===
+    // For local testing we simply copy a demo file (if present) or write a placeholder file and return it.
+
+    const resultsDir = path.join(__dirname, 'public', 'results');
+    if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
+
+    // Use a demo audio file if you have one in /public/demo/demo_song.mp3
+    const demoFile = path.join(__dirname, 'public', 'demo', 'demo_song.mp3');
+    const outName = `song_${Date.now()}_${uuidv4().slice(0,6)}.mp3`;
+    const outPath = path.join(resultsDir, outName);
+
+    if (fs.existsSync(demoFile)) {
+      fs.copyFileSync(demoFile, outPath);
+    } else {
+      // create a simple placeholder file. In production, replace this with actual audio generation.
+      fs.writeFileSync(outPath, 'This is a placeholder. Replace backend with real AI generation.');
+    }
+
+    const audioUrl = `/results/${outName}`;
+    return res.json({ audioUrl });
+
+    // === Option B: Real AI provider (pseudocode) ===
+    // NOTE: Do NOT use nested /* */ block comments inside this block. Use line comments (//) or move pseudocode to docs.
+
+    // Example high-level approach:
+    // 1) Generate melody/backing track using a music model or library (e.g., Magenta, Riffusion, local Stable-based music model)
+    // 2) Generate vocals by doing TTS/voice-synthesis on each lyric line or use singing-voice model
+    // 3) Mix vocals + backing using ffmpeg
+    // 4) Upload final file to S3 and return the public URL
+
+    // Pseudocode (illustrative only):
+    // const melodyBuffer = await musicApi.generate({ genre, bpm, length: 120 });
+    // const vocalBuffer = await singingApi.sing({ lyrics, voice, melodyBuffer });
+    // const mixedBuffer = await ffmpegMix(melodyBuffer, vocalBuffer);
+    // const uploadedUrl = await uploadToS3(mixedBuffer, outName);
+    // return res.json({ audioUrl: uploadedUrl });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.use('/results', express.static(path.join(__dirname, 'public', 'results')));
+
+const port = process.env.PORT || 3001;
+app.listen(port, () => console.log('Server listening on', port));
+
+
+---
+ADDED TESTS / QUICK CHECKS (run these after you start the server)
+
+1) Health check (should return { ok: true }):
+
+curl http://localhost:3001/api/hello
+
+2) Generate (mock) - returns audioUrl (demo file or placeholder):
+
+curl -X POST http://localhost:3001/api/generate \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Test","lyrics":"hello world","genre":"pop","voice":"female","bpm":100}'
+
+3) Node quick test (save as server/test_generate.js) and run `node test_generate.js` (Node 18+ has global fetch):
+
+// test_generate.js
+// const res = await fetch('http://localhost:3001/api/generate', {
+//   method: 'POST',
+//   headers: { 'Content-Type': 'application/json' },
+//   body: JSON.stringify({ title: 'T', lyrics: 'la la la', genre: 'pop', voice: 'female', bpm: 100 })
+// });
+// const data = await res.json();
+// console.log(data);
+
+
+If you still see the original SyntaxError (Unexpected token), it was almost certainly caused by a nested /* ... */ block comment which prematurely closed the surrounding comment. I removed the nested block comment and converted the inner pseudocode to line comments to avoid nesting.
+
+---
+What I changed:
+- Removed nested /* ... */ inside the backend example and replaced it with line comments to prevent the JS parser from seeing an unexpected end-of-comment.
+- Kept the entire backend example inside a single block comment (so this React file remains a pure frontend file). IMPORTANT: move the backend example into its own server/server.js when you implement it.
+- Added explicit quick test curl commands and a small Node test snippet so you have basic test-cases to verify the backend.
+
+---
+Next steps / question for you (required):
+1) Do you want the backend example extracted into a real server/server.js file that I create here (so the repo becomes ready-to-run)? If yes, I will add that file content (and package.json) in the canvas.
+2) Is the expected behaviour that the endpoint returns a playable MP3 (or WAV) file URL that the frontend can load? Or do you want a zip with stems (vocals + backing) instead? Tell me exactly what you expect the API to return so I can add tests that validate it.
+
+Tell me which option and the exact expected behavior and I will update the repo files (add server.js, package.json, and tests) immediately.
