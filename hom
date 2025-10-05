@@ -1,0 +1,47 @@
+import { Button } from "@/components/ui/button";
+
+export default function HomePage() {
+  return (
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-purple-700 to-black text-white">
+      {/* Hero Section */}
+      <header className="flex-1 flex flex-col items-center justify-center text-center p-8">
+        <h1 className="text-5xl font-bold mb-4">AI Song Maker 🎵</h1>
+        <p className="text-lg mb-6 max-w-xl">
+          Turn your ideas into songs! Generate lyrics, melodies, and vocals instantly with AI.
+        </p>
+        <Button size="lg" className="bg-pink-500 hover:bg-pink-600">
+          Start Creating
+        </Button>
+      </header>
+
+      {/* Features Section */}
+      <section className="grid md:grid-cols-3 gap-6 p-10 max-w-5xl mx-auto">
+        <div className="bg-white/10 rounded-2xl p-6 shadow">
+          <h2 className="text-xl font-semibold mb-2">🎤 Lyrics</h2>
+          <p>Type a theme or mood, and AI writes custom lyrics for you.</p>
+        </div>
+        <div className="bg-white/10 rounded-2xl p-6 shadow">
+          <h2 className="text-xl font-semibold mb-2">🎶 Melody</h2>
+          <p>AI creates unique background music to fit your vibe.</p>
+        </div>
+        <div className="bg-white/10 rounded-2xl p-6 shadow">
+          <h2 className="text-xl font-semibold mb-2">🎧 Vocals</h2>
+          <p>Generate singing voices or export instrumentals easily.</p>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="text-center py-6 border-t border-white/20">
+        <p>© {new Date().getFullYear()} AI Song Maker. Built with ❤️ and AI.</p>
+        <a
+          href="https://github.com/YOUR_USERNAME/ai-song-maker"
+          target="_blank"
+          rel="noreferrer"
+          className="underline"
+        >
+          GitHub Repo
+        </a>
+      </footer>
+    </div>
+  );
+}
